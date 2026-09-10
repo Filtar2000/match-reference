@@ -1,0 +1,8 @@
+node_modules/
+package-lock.json
+
+# work output (per the suggested pixel/ layout)
+pixel/
+shots/
+diff/
+*.local.png
