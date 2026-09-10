@@ -1,8 +1,15 @@
 # match-reference
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+![Node ≥ 18](https://img.shields.io/badge/node-%E2%89%A518-3c873a.svg)
+![Claude Code · Codex · Cursor](https://img.shields.io/badge/agents-Claude%20Code%20%C2%B7%20Codex%20%C2%B7%20Cursor-6b5bd6.svg)
+![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)
+
 A coding-agent skill — for [Claude Code](https://claude.com/claude-code), [Codex](https://openai.com/codex/), Cursor, or any tool that reads `AGENTS.md` — plus a set of standalone Node scripts, that helps you rebuild a frontend so it looks **(near) pixel-identical** to a visual reference: a design mockup, a screenshot of another site or app, a photo of a UI, or an existing page you want to clone.
 
 Instead of eyeballing *"looks close enough"*, it **measures** the gap with a pixel diff and tells you exactly where the layout is off: a clipped column, wrong padding, a text wrap, an off color.
+
+![match-reference loop in action](docs/example/loop.gif)
 
 ## Why
 
