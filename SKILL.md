@@ -61,11 +61,11 @@ It prints something like:
 OVERALL  3.718% pixels differ  ·  SSIM 0.9705  ·  several regions off
 CONVERGE first pass
 
-#1  [text]   box 264,360 372x48  → button.btn
-    colour is off (ΔE 10.8): make it bluer, toward ~#2f7bed (computed background rgb(110,163,242)).
+#1  [colour]  box 264,360 372x48  → button.btn
+    colour is off (ΔE 12.6): make it darker, bluer, toward ~#2f7bed (computed background rgb(110,163,242)).
     look: out/regions/r01.png
 #2  [spacing/alignment]  box 240,420 420x12  → div.card
-    thin band near the bottom edge — likely padding off by ~12px (padding 18px 28px).
+    thin band near the edge — likely padding/margin off by ~12px (padding 18px 28px).
     look: out/regions/r02.png
 ```
 and writes `out/analyze.json` (the full structured report), `out/diff.png`, and one `out/regions/rNN.png` strip per region.

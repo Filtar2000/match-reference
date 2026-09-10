@@ -37,13 +37,14 @@ The reference vs. an in-progress build with three mistakes — a lighter button 
 OVERALL  3.718% pixels differ  ·  SSIM 0.9705 (1.0 = identical)  ·  several regions off
 CONVERGE first pass
 
-#1  [text]   box 264,360 372x48  → button.btn
-    colour is off (ΔE 10.8): make it bluer, toward ~#2f7bed
-    (computed background rgb(110,163,242)).            look: out/regions/r01.png
+#1  [colour]  box 264,360 372x48  → button.btn
+    colour is off (ΔE 12.6): make it darker, bluer, toward ~#2f7bed
+    (its computed background rgb(110,163,242)).        look: out/regions/r01.png
 #2  [spacing/alignment]  box 240,420 420x12  → div.card
-    thin band near the bottom edge — padding off by ~12px (padding 18px 28px).
-#3  [text]   box 264,240 96x12  → div.cond
-    colour is off (ΔE 24.1): make it warmer (less blue), toward ~#f39c12.
+    thin band near the edge — padding/margin off by ~12px (padding 18px 28px).
+#3  [text]  box 264,240 96x12  → div.cond
+    text differs — colour is off (ΔE 24.1): make it lighter, warmer (less blue);
+    also check wording / size against the reference (look at the strip).
 ```
 
 …and writes one `reference | your build | diff` strip per region for the agent to **look at** (models fix faster from the picture than from numbers):

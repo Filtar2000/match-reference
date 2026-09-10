@@ -2,8 +2,8 @@
 // analyze.mjs — the brain of the loop.
 //
 // Turns "3.2% of pixels differ" into an ACTIONABLE, per-region fix list an LLM
-// can execute: for each wrong zone it reports a category (color / spacing /
-// missing / text / mixed), a perceptual color delta (CIEDE2000) with direction,
+// can execute: for each wrong zone it reports a category (colour / spacing /
+// missing / text / mixed), a perceptual colour delta (CIEDE2000) with direction,
 // the DOM element it maps to (with its computed CSS, if a regions file is given),
 // and a plain-language hypothesis of what to change. It also writes one
 // side-by-side "reference | your build | diff" strip per region for the agent to
@@ -250,16 +250,33 @@ function variance(img, r) {
   }
   return n ? Math.max(0, s2 / n - (s / n) ** 2) : 0;
 }
+// Most common colour in a region (quantized). For a filled block this returns
+// its fill, ignoring surrounding whitespace/text — a cleaner target than a mean.
+function dominantColor(img, r) {
+  const bins = new Map();
+  for (let y = r.y; y < r.y + r.h; y += 2) for (let x = r.x; x < r.x + r.w; x += 2) {
+    const i = (W * y + x) * 4;
+    const k = (img.data[i] >> 4) << 8 | (img.data[i + 1] >> 4) << 4 | (img.data[i + 2] >> 4);
+    const e = bins.get(k) || [0, 0, 0, 0];
+    e[0] += img.data[i]; e[1] += img.data[i + 1]; e[2] += img.data[i + 2]; e[3]++;
+    bins.set(k, e);
+  }
+  let best = null, bc = 0;
+  for (const e of bins.values()) if (e[3] > bc) { bc = e[3]; best = e; }
+  return best ? [best[0] / best[3], best[1] / best[3], best[2] / best[3]] : [0, 0, 0];
+}
 const hex = ([r, g, b]) => '#' + [r, g, b].map(v => Math.round(v).toString(16).padStart(2, '0')).join('');
 function colorDir(a, b) {                     // ref a vs cand b: how to move cand toward ref
   const dr = a[0] - b[0], dg = a[1] - b[1], db = a[2] - b[2];
   const words = [];
-  if (0.299 * dr + 0.587 * dg + 0.114 * db > 12) words.push('lighter');
-  else if (0.299 * dr + 0.587 * dg + 0.114 * db < -12) words.push('darker');
-  if (db - (dr + dg) / 2 > 14) words.push('bluer');
-  else if ((dr + dg) / 2 - db > 14) words.push('warmer (less blue)');
-  if (dr - dg > 18) words.push('redder');
-  else if (dg - dr > 18) words.push('greener');
+  const lum = 0.299 * dr + 0.587 * dg + 0.114 * db;
+  if (lum > 12) words.push('lighter'); else if (lum < -12) words.push('darker');
+  // pick the single strongest hue shift, not several contradictory ones
+  const hues = [
+    ['bluer', db - (dr + dg) / 2], ['warmer (less blue)', (dr + dg) / 2 - db],
+    ['redder', dr - Math.max(dg, db)], ['greener', dg - Math.max(dr, db)],
+  ].filter(h => h[1] > 14).sort((x, y) => y[1] - x[1]);
+  if (hues.length) words.push(hues[0][0]);
   return words.length ? words.join(', ') : 'a slightly different shade';
 }
 function cropStrip(r, id) {                    // ref | mine | diff strip for the agent to view
@@ -275,26 +292,33 @@ function cropStrip(r, id) {                    // ref | mine | diff strip for th
 
 const regions = clusters.slice(0, 12).map((r, idx) => {
   const id = idx + 1;
-  const cRef = meanColor(ref, r), cCand = meanColor(cand, r);
-  const dE = ciede2000(rgb2lab(...cRef), rgb2lab(...cCand));
   const vRef = variance(ref, r), vCand = variance(cand, r);
   // DOM element with best overlap
   let el = null, bestIou = 0;
   for (const e of elements) { const s = iou(r, e.box); if (s > bestIou) { bestIou = s; el = e; } }
+  // a filled block = element with a real (non-transparent) background. Its diff
+  // is a fill-colour problem, NOT a text problem, even if it holds a label.
+  const bg = el && el.style && el.style.background;
+  const filled = !!(bg && !/rgba\(0,\s*0,\s*0,\s*0\)|transparent/i.test(bg));
+  // for a filled block compare its dominant fill; else the region mean
+  const cRef = filled ? dominantColor(ref, r) : meanColor(ref, r);
+  const cCand = filled ? dominantColor(cand, r) : meanColor(cand, r);
+  const dE = ciede2000(rgb2lab(...cRef), rgb2lab(...cCand));
   // category
   let category = 'mixed';
   const thin = r.h <= cell * 2 || r.w <= cell * 2;
   const oneFlat = (vRef < 60) !== (vCand < 60);
   const hasText = !!(el && el.text);
   if (oneFlat) category = 'missing/extra';
+  else if (filled && dE > 4 && !thin) category = 'colour';
   else if (hasText && dE > 4) category = 'text';
-  else if (dE > 6 && !thin) category = 'color';
+  else if (dE > 6 && !thin) category = 'colour';
   else if (thin) category = 'spacing/alignment';
   else if (hasText) category = 'text';
   // hypothesis
   let hypothesis;
   const tgt = hex(cRef);
-  if (category === 'color') {
+  if (category === 'colour') {
     hypothesis = (el ? el.selector + ' ' : 'this area ') + 'colour is off (ΔE ' + dE.toFixed(1) +
       '): make it ' + colorDir(cRef, cCand) + ', toward ~' + tgt +
       (el ? ' (its computed colour is ' + el.style.color + ', background ' + el.style.background + ')' : '') + '.';
