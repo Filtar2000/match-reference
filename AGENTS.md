@@ -59,6 +59,16 @@ target.
    `compare.mjs --threshold 0.12` (lower = stricter); `--aa` includes
    anti-aliasing (normally ignored noise).
 
+## Different sizes, mobile, imprecise references
+
+`compare.mjs` needs both images at the **same pixel size**, and a real reference rarely matches out of the box:
+- **Shoot at the reference's exact size:** `capture.mjs <url> shots/mine.png --match reference/target.png`.
+- **Can't re-shoot to match:** normalize with `resize.mjs <in> <out> <w> [h]` (e.g. downscale a retina @2x reference to @1x). A resize blurs slightly, so raise `--threshold` afterward.
+- **Mobile / phone screenshot:** `capture.mjs <url> shots/mine.png --device "iPhone 13"` (or "Pixel 7", "iPad Mini", any Playwright device); combine with `--match`/`resize.mjs` for a specific pixel size.
+- **Imprecise reference (photo of a screen, lossy or hand-cropped image, slight skew):** 0% is impossible and not the goal. Treat the diff as a heat map of where you're structurally off, raise `--threshold` to ~0.2–0.3, calibrate region by region, and trust layout/spacing/color over exact pixels.
+
+Once the two images are the same size, the loop is identical.
+
 ## Golden rule: content beats pixels
 
 Where the reference has mistakes or choices not to copy (wrong labels, an extra

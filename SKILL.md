@@ -55,6 +55,7 @@ node <skill-dir>/scripts/capture.mjs <url> shots/mine.png --width <W> --height <
 `capture.mjs` already pins: same viewport, `deviceScaleFactor:1`, `locale it-IT`, timezone `Europe/Rome`, `colorScheme light`, `reducedMotion reduce`, a `visual-test` class on `<html>` to kill animations, `await document.fonts.ready` + ~400ms wait. Without this block the screenshot "wobbles" and the diff is just noise.
 - Add a CSS rule for `html.visual-test` in your frontend that zeroes animations/transitions/caret (example in the header comment of `capture.mjs`).
 - `--selector ".summary"` shoots a single component; `--full` shoots the entire page.
+- `--match reference/target.png` shoots at the reference's exact pixel size (no size mismatch); `--device "iPhone 13"` shoots a mobile viewport. See "Different sizes, mobile, imprecise references" below.
 - Adjust the pinned locale/timezone in `capture.mjs` if your target renders for a different region.
 
 ### 3. Diff and calibration
@@ -75,6 +76,17 @@ Repeat for header / table / summary / footer separately.
 
 Diff params: `--threshold 0.12` by default (lower = stricter); `--aa` includes anti-aliasing (normally ignored, it's noise).
 
+## Different sizes, mobile, imprecise references
+
+`compare.mjs` needs the two images to have the **same pixel dimensions** — and a real reference rarely matches your build out of the box (a phone screenshot, a mockup exported at some odd size, a compressed/scaled image). Handle it, don't give up:
+
+- **Shoot at the reference's exact size.** The easiest fix: `capture.mjs <url> shots/mine.png --match reference/target.png` reads the reference's pixel size and screenshots at exactly that size. Now the diff just works.
+- **Reference is a different size and you can't re-shoot to match.** Normalize with `resize.mjs`: scale one image to the other's size before diffing, e.g. `node <skill-dir>/scripts/resize.mjs reference/raw.png reference/target.png 900 520`. A retina @2x reference: `resize.mjs reference/raw@2x.png reference/target.png 900` (height auto).
+- **Mobile / phone screenshot reference.** Use a device preset: `capture.mjs <url> shots/mine.png --device "iPhone 13"` (or `"Pixel 7"`, `"iPad Mini"`, any Playwright device). A phone's deviceScaleFactor (2–3×) makes the PNG that many times larger — combine with `--match` or `resize.mjs` if you need a specific pixel size.
+- **Imprecise reference (a photo of a screen, a lossy or hand-cropped screenshot, slight skew).** Pixel-perfect 0% is impossible here and not the goal. Treat the diff as a **heat map of where you're structurally off**: raise `--threshold` (e.g. `0.2`–`0.3`), calibrate region by region, and trust layout / spacing / color over exact pixels. An imprecise reference is a guide, not ground truth — this is the content-beats-pixels rule again.
+
+Whatever you do, once the two images are the same size the loop is identical.
+
 ## Golden rule: content beats pixels
 
 Where the reference has mistakes or choices you should NOT copy (wrong field names, an extra flag, fake mockup data), **keep your version**. The goal is the look, not cloning the mockup's mistakes. The diff will flag those zones in red: that's expected, ignore it there.
@@ -82,4 +94,4 @@ Where the reference has mistakes or choices you should NOT copy (wrong field nam
 ## Practical notes
 - ImageMagick / `magick` may not be installed: do crops with `crop.mjs` (pngjs), never with an ImageMagick CLI.
 - Fonts: if the reference uses fonts your frontend doesn't have, the diff will be noisy everywhere there's text. Load the same fonts (or the closest ones) before chasing pixels.
-- If `compare.mjs` exits with "SIZE MISMATCH", re-shoot with `--width/--height` equal to the reference (or fix the `--scale`).
+- If `compare.mjs` exits with "SIZE MISMATCH", make the two images the same size: re-shoot with `--match reference/target.png` (or `--width/--height`), or normalize with `resize.mjs`. See the section above.

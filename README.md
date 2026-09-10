@@ -17,13 +17,13 @@ Instead of eyeballing *"looks close enough"*, it **measures** the gap with a pix
 
 ## Example
 
-The reference (target) vs. an in-progress build with three mistakes — a wrong button blue, a washed-out status pill, and tighter card padding:
+The reference (target) vs. an in-progress build with three mistakes — a lighter button blue, a greyed-out condition label, and tighter card padding:
 
-| Reference | Your build | Diff (`3.280%`) |
+| Reference | Your build | Diff (`3.72%`) |
 |---|---|---|
 | ![reference](docs/example/reference.png) | ![your build](docs/example/mine.png) | ![diff](docs/example/diff.png) |
 
-The diff makes the mistakes obvious at a glance: the whole button lights up (wrong color), so does the pill, and the padding shift shows as ghosting on the title plus a pink line at the card's bottom edge. Fix those, re-shoot, and the pink disappears.
+The diff makes the mistakes obvious at a glance: the whole button lights up (wrong color), so does the condition label, and the padding shift shows as a pink line at the card's bottom edge. Fix those, re-shoot, and the pink disappears.
 
 ## How it works — a 3-part loop
 
@@ -131,11 +131,33 @@ pixel/
 
 | Script | What it does | Key flags |
 |---|---|---|
-| `capture.mjs <url> <out.png>` | Deterministic Playwright screenshot | `--width` `--height` `--full` `--selector "css"` `--scale` `--wait` |
+| `capture.mjs <url> <out.png>` | Deterministic Playwright screenshot | `--width` `--height` `--full` `--selector "css"` `--scale` `--wait` `--device "iPhone 13"` `--match <ref.png>` |
 | `compare.mjs <ref.png> <cand.png> <diff.png>` | Pixel diff (pixelmatch), prints % + writes pink diff | `--threshold` (default 0.12, lower = stricter) `--aa` |
 | `crop.mjs <in.png> <out.png> <x> <y> <w> <h>` | Crop a region (pngjs; works without ImageMagick) | — |
+| `resize.mjs <in.png> <out.png> <w> [h]` | Resize a PNG (bilinear, pngjs) to normalize sizes before diffing | height auto if omitted |
 
 **Tip for `capture.mjs`:** add a CSS rule for `html.visual-test` in your frontend to zero animations/transitions/caret during the shot — `capture.mjs` adds that class before shooting. The pinned `locale`/`timezoneId` default to Italy; edit them in `capture.mjs` to match your target's region.
+
+## Different sizes, mobile, imprecise references
+
+Your reference will rarely be the exact pixel size of your build — it might be a phone screenshot, a mockup exported at an odd size, or a lossy image. `compare.mjs` needs both images at the **same pixel size**; here's how to get there.
+
+- **Shoot at the reference's exact size** — the one-flag fix:
+  ```bash
+  node scripts/capture.mjs http://localhost:5000/ shots/mine.png --match reference/target.png
+  ```
+- **Can't re-shoot to match?** Normalize with `resize.mjs` (scale one image to the other's size). A retina @2x reference down to @1x:
+  ```bash
+  node scripts/resize.mjs reference/raw@2x.png reference/target.png 900
+  ```
+- **Mobile / phone reference** — use a device preset:
+  ```bash
+  node scripts/capture.mjs http://localhost:5000/ shots/mine.png --device "iPhone 13"
+  ```
+  Any Playwright device works ("Pixel 7", "iPad Mini", ...). A phone's 2–3× pixel density makes the PNG larger — combine with `--match` or `resize.mjs` for a specific size.
+- **Imprecise reference** (a photo of a screen, a hand-cropped or compressed image): a 0% diff is impossible and isn't the goal. Treat the diff as a **heat map of where you're structurally off** — raise `--threshold` (≈ `0.2`–`0.3`), calibrate region by region, and trust layout, spacing, and color over exact pixels.
+
+A resize blurs slightly, so after one don't chase 0% — lean on region structure. Once both images are the same size, the loop is exactly the same.
 
 ## Golden rule: content beats pixels
 
