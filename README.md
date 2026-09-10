@@ -9,7 +9,7 @@ A coding-agent skill — for [Claude Code](https://claude.com/claude-code), [Cod
 
 Most visual tools stop at *"here's a red overlay, good luck."* This one **measures the gap and hands the agent a fix list it can execute** — for each wrong zone: what kind of mistake it is, how far off the colour is and in which direction, the exact element and CSS behind it, and a plain-language hypothesis of the cause — then iterates until it converges.
 
-![match-reference loop in action](docs/example/loop.gif)
+![match-reference loop in action](docs/example/walkthrough.gif)
 
 ## What makes it different
 
