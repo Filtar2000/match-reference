@@ -114,6 +114,48 @@ if (selector) {
   await page.screenshot({ path: out, fullPage });
 }
 
+// --dom: dump visible elements (box in SCREENSHOT pixels + key computed styles),
+// so analyze.mjs can map each red region to a real element and its CSS, and
+// suggest which property is wrong.
+const domPath = arg('dom', null);
+if (domPath) {
+  const dpr = ctxOpts.deviceScaleFactor || 1;
+  const els = await page.evaluate(() => {
+    const out = [];
+    const nodes = document.querySelectorAll('body *');
+    for (const el of nodes) {
+      const r = el.getBoundingClientRect();
+      if (r.width < 6 || r.height < 6 || r.bottom < 0 || r.right < 0) continue;
+      const cs = getComputedStyle(el);
+      if (cs.visibility === 'hidden' || cs.display === 'none' || cs.opacity === '0') continue;
+      const direct = Array.from(el.childNodes)
+        .filter(n => n.nodeType === 3).map(n => n.textContent.trim()).join(' ').trim();
+      out.push({
+        selector: el.tagName.toLowerCase() +
+          (el.id ? '#' + el.id : '') +
+          (el.className && typeof el.className === 'string'
+            ? '.' + el.className.trim().split(/\s+/).slice(0, 3).join('.') : ''),
+        box: { x: r.x, y: r.y, w: r.width, h: r.height },
+        text: direct.slice(0, 60),
+        style: {
+          color: cs.color, background: cs.backgroundColor,
+          fontSize: cs.fontSize, fontWeight: cs.fontWeight,
+          padding: cs.padding, margin: cs.margin,
+          borderRadius: cs.borderRadius, border: cs.border,
+          textAlign: cs.textAlign, opacity: cs.opacity,
+        },
+      });
+    }
+    return out;
+  });
+  for (const e of els) {
+    e.box = { x: Math.round(e.box.x * dpr), y: Math.round(e.box.y * dpr),
+              w: Math.round(e.box.w * dpr), h: Math.round(e.box.h * dpr) };
+  }
+  fs.writeFileSync(domPath, JSON.stringify({ dpr, viewport: { width, height }, elements: els }, null, 2));
+  console.log('DOM ' + domPath + ' (' + els.length + ' elements)');
+}
+
 await browser.close();
 const tag = (deviceName ? deviceName + ' ' : '') + width + 'x' + height +
   '@' + ctxOpts.deviceScaleFactor + (fullPage ? ' full' : '');

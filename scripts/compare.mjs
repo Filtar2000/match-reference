@@ -3,10 +3,14 @@
 // Writes a diff PNG (differing zones in bright pink) and prints the measured gap.
 //
 // Usage:
-//   node compare.mjs <reference.png> <candidate.png> <diff.png> [--threshold 0.12] [--aa]
+//   node compare.mjs <reference.png> <candidate.png> <diff.png> [--threshold 0.12] [--aa] [--engine odiff]
 //
 //   --threshold  per-pixel sensitivity 0..1 (default 0.12; lower = stricter)
 //   --aa         include anti-aliasing differences (default: ignored)
+//   --engine     "pixelmatch" (default) or "odiff" (optional native fast path for
+//                huge full-page images; needs the odiff-bin optional dependency).
+//                NOTE: odiff's AA filter can hide subtle colour/weight changes —
+//                prefer pixelmatch when chasing small style tweaks.
 //
 // If the two images have different dimensions, it says so and exits: re-shoot
 // with the same viewport as the reference (capture.mjs --width/--height).
@@ -35,6 +39,21 @@ if (!refPath || !candPath || !diffPath) {
 
 const threshold = parseFloat(arg('threshold', '0.12'));
 const includeAA = arg('aa', false) === true;
+const engine = String(arg('engine', 'pixelmatch'));
+
+if (engine === 'odiff') {
+  try {
+    const { compare } = await import('odiff-bin');
+    const res = await compare(refPath, candPath, diffPath, { threshold, antialiasing: !includeAA });
+    if (res.match) console.log('Differing pixels: 0  (0.000%)  [odiff]');
+    else console.log('Differing pixels: ' + (res.diffCount ?? '?') + '  (' +
+      (res.diffPercentage != null ? res.diffPercentage.toFixed(3) : '?') + '%)  [odiff]');
+    console.log('Diff saved:       ' + diffPath);
+    process.exit(0);
+  } catch (e) {
+    console.error('odiff unavailable (' + e.message + '), falling back to pixelmatch.');
+  }
+}
 
 const ref = PNG.sync.read(fs.readFileSync(refPath));
 const cand = PNG.sync.read(fs.readFileSync(candPath));

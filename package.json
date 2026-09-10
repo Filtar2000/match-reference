@@ -1,11 +1,16 @@
 {
   "name": "match-reference-skill",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
   "description": "Deterministic screenshot + pixel diff loop to replicate a frontend from a reference image",
   "dependencies": {
     "playwright": "^1.48.0",
     "pixelmatch": "^6.0.0",
-    "pngjs": "^7.0.0"
+    "pngjs": "^7.0.0",
+    "ssim.js": "^3.5.0"
+  },
+  "optionalDependencies": {
+    "odiff-bin": "^3.1.1"
   }
 }
