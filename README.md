@@ -8,6 +8,16 @@ Instead of eyeballing *"looks close enough"*, it **measures** the gap with a pix
 
 "It resembles it" is not a spec. A pixel diff turns a vague feeling into a number and a picture: the differing zones light up in bright pink, so you fix the real problem instead of guessing. You close the gap region by region until it matches.
 
+## Example
+
+The reference (target) vs. an in-progress build with three mistakes — a wrong button blue, a washed-out status pill, and tighter card padding:
+
+| Reference | Your build | Diff (`3.280%`) |
+|---|---|---|
+| ![reference](docs/example/reference.png) | ![your build](docs/example/mine.png) | ![diff](docs/example/diff.png) |
+
+The diff makes the mistakes obvious at a glance: the whole button lights up (wrong color), so does the pill, and the padding shift shows as ghosting on the title plus a pink line at the card's bottom edge. Fix those, re-shoot, and the pink disappears.
+
 ## How it works — a 3-part loop
 
 1. **Golden reference (immutable).** Save the target image as a fixed PNG. Never touch it; it's the ruler.
